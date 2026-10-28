@@ -8,6 +8,9 @@ for(const width of [320,390,768,1024]) {
   for(const screen of screens){
    await page.goto('/#/'+screen.path);await page.locator('h1').first().waitFor();await page.evaluate(()=>document.fonts.ready);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),screen.path).toBeTruthy();
+   await expect(page.locator('.statusbar,.safe-area')).toHaveCount(0);
+   const frame=await page.locator('.app-shell').evaluate(el=>({width:el.getBoundingClientRect().width,radius:getComputedStyle(el).borderRadius}));
+   expect(frame.width).toBe(width);expect(frame.radius).toBe('0px');
    for(const img of await page.locator('img').all()){expect(await img.evaluate(el=>el.complete&&el.naturalWidth>0),`${screen.path}: image`).toBeTruthy();}
   }
   expect(errors).toEqual([]);

@@ -25,11 +25,11 @@ npx playwright test
 - `src/App.jsx`: telas e navegação por hash, compatível com hospedagem estática.
 - `src/data/screens.js`: catálogo de telas, produtos de demonstração e cálculos.
 - `src/styles.css`: tokens, layouts e adaptação de celular para tablet.
-- `public/assets`: imagens locais extraídas da referência enviada; a resolução é limitada pelo arquivo original fornecido. Substitua por exportações originais em alta resolução quando disponíveis.
+- `public/assets`: logo original enviada pelo usuário e fotos locais extraídas da referência. A resolução das fotos é limitada pelo arquivo fornecido; substitua por exportações originais quando disponíveis.
 
 ## Escopo
 
-Entrada, conexão, início, cardápio, produto, divisão e convites, revisão de pedido, acompanhamento, comanda individual e coletiva, pagamento, comprovante, ajuda e estados alternativos. Base visual de 390 px, alturas de referência de cada frame e layout fluido para celular e tablet.
+Entrada, conexão, início, cardápio, produto, divisão e convites, revisão de pedido, acompanhamento, comanda individual e coletiva, pagamento, comprovante, ajuda e estados alternativos. Referência visual de 390 px e layout de sistema web em toda a largura da janela, adaptado para celular e tablet. Sem barra de hora/bateria/Wi-Fi, moldura arredondada ou indicador de navegação do dispositivo. O menu do próprio sistema foi mantido. A logo foi substituída pelo arquivo original enviado pelo usuário.
 
 Pedidos, convites, status e pagamentos são simulações locais. Nada é enviado a um servidor e não há cobrança real. Os dados ficam no `sessionStorage` da aba. O comprovante baixado é um arquivo de texto de demonstração, sem valor fiscal. Os termos definitivos e a integração com API devem ser implementados antes de operar o produto.
 
@@ -37,4 +37,4 @@ O botão de pagamento usa o total calculado com a taxa de serviço (R$ 59,40 no 
 
 ## Verificação
 
-Testes unitários de valores e rotas; testes de navegador para as 29 telas em 320, 390, 768 e 1024 px, e fluxo de entrada até comprovante. Todas as imagens e fontes são locais, sem dependência de URLs temporárias do Figma.
+Testes unitários de valores e rotas; testes de navegador para as 29 telas em 320, 390, 768 e 1024 px, e fluxo de entrada até comprovante. Os testes também verificam ausência de elementos de celular e contêiner sem cantos arredondados ocupando toda a largura. Todas as imagens e fontes são locais, sem dependência de URLs temporárias do Figma.
