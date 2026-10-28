@@ -38,3 +38,7 @@ O botão de pagamento usa o total calculado com a taxa de serviço (R$ 59,40 no 
 ## Verificação
 
 Testes unitários de valores e rotas; testes de navegador para as 29 telas em 320, 390, 768 e 1024 px, e fluxo de entrada até comprovante. Os testes também verificam ausência de elementos de celular e contêiner sem cantos arredondados ocupando toda a largura. Todas as imagens e fontes são locais, sem dependência de URLs temporárias do Figma.
+
+## Cabeçalho e menu fixos
+
+O cabeçalho permanece fixo no topo e o menu do sistema na parte inferior durante a rolagem. O conteúdo reserva espaço para ambos, incluindo a área segura inferior de dispositivos compatíveis. Telas que não possuem menu inferior reservam somente o espaço do cabeçalho. Os modais continuam acima dos controles fixos.

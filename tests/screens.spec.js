@@ -26,3 +26,17 @@ test('name validation, menu search, split selection, checkout and receipt',async
  await page.getByRole('button',{name:'Comanda',exact:true}).click();await page.getByRole('button',{name:/Ir para pagamento/}).click();await page.getByRole('button',{name:'Pagar R$ 59,40'}).click();await expect(page.getByRole('heading',{name:'Conta paga. Tudo certo!'})).toBeVisible();await page.getByRole('button',{name:'Ver comanda encerrada'}).click();await expect(page.getByRole('heading',{name:'Foi bom ter você aqui.'})).toBeVisible();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Salvar comprovante'}).click();expect((await download).suggestedFilename()).toContain('comprovante');
 });
+for(const width of [320,390,768,1024]) {
+ test(`header and menu stay fixed without covering content at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height:540});await page.goto('/#/cardapio');await page.evaluate(()=>document.fonts.ready);
+  const header=page.locator('.topbar'),nav=page.getByRole('navigation',{name:'Navegação principal'});
+  await expect(header).toHaveCSS('position','fixed');await expect(nav).toHaveCSS('position','fixed');
+  const heading=await page.locator('h1').first().boundingBox();const headerBefore=await header.boundingBox();expect(heading.y).toBeGreaterThanOrEqual(headerBefore.y+headerBefore.height);
+  await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+  const after=await header.boundingBox(),menu=await nav.boundingBox();expect(after.y).toBe(0);expect(menu.y+menu.height).toBe(540);
+  const action=await page.getByRole('button',{name:/Ver meu pedido/}).boundingBox();expect(action.y+action.height).toBeLessThanOrEqual(menu.y);
+  await page.getByRole('button',{name:'Comanda',exact:true}).click();await page.getByRole('button',{name:/Ir para pagamento/}).click();await page.getByRole('button',{name:/Crédito · final 4242/}).click();
+  await expect(page.getByRole('dialog')).toBeVisible();await page.getByRole('button',{name:'Pix',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.goto('/#/entrada');await expect(nav).toHaveCount(0);const shell=await page.locator('.app-shell').evaluate(el=>({padding:getComputedStyle(el).paddingBottom}));expect(shell.padding).toBe('0px');
+ });
+}

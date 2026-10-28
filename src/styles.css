@@ -27,3 +27,14 @@
 .receipt-logo .logo{width:220px;height:auto}
 @media(min-width:1000px){.product-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media print{.topbar,.bottom-nav,.actions{display:none}}
+
+/* Keep the application controls visible while the page content scrolls. */
+:root{--header-height:64px;--bottom-nav-height:80px}
+html{scroll-padding-top:calc(var(--header-height) + 16px);scroll-padding-bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom,0px) + 16px)}
+.app-shell{padding-top:var(--header-height)}
+.app-shell.has-bottom-nav{padding-bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom,0px))}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:5;height:var(--header-height);max-width:none;background:var(--paper);border-bottom:1px solid var(--line);padding-inline:24px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:5;height:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom,0px));padding:10px 0 calc(16px + env(safe-area-inset-bottom,0px));background:white}
+@media(min-width:600px){.topbar{padding-inline:max(40px,calc((100% - 960px)/2))}}
+@media(max-width:359px){.topbar{padding-inline:16px}}
+@media print{.app-shell,.app-shell.has-bottom-nav{padding:0}}
