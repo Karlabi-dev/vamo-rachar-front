@@ -1,6 +1,6 @@
 # VamoRachar! — Front-end
 
-Aplicação em React + Vite com protótipo visual de 29 telas do cliente e uma primeira integração de entrada na mesa e consulta ao cardápio. Inclui também áreas de Cozinha/Bar, Praça e Administrador com dados fictícios e estado local.
+Aplicação em React + Vite com protótipo visual de 29 telas do cliente e integração inicial de entrada, cardápio e pedido individual de uma unidade. Inclui áreas de Cozinha/Bar, Praça e Administrador com dados fictícios e estado local, além de telas conectadas experimentais para a operação.
 
 ## Rodar localmente
 
@@ -45,7 +45,7 @@ O cabeçalho permanece fixo no topo e o menu do sistema na parte inferior durant
 
 ## Integração inicial: entrada e cardápio
 
-O modo conectado identifica a mesa pelo endereço, autentica o cliente anonimamente no Firebase e chama `joinTable` e `listMenu` no backend. O cardápio usa preço em centavos retornado pela API. Esta etapa não envia pedidos nem processa pagamentos; o modo conectado informa essa limitação e não apresenta as telas simuladas como operações reais.
+O modo conectado identifica a mesa pelo endereço, autentica o cliente anonimamente no Firebase e chama `joinTable` e `listMenu` no backend. O cardápio usa preço em centavos retornado pela API. O modo conectado também permite criar um pedido individual de uma unidade por vez. A divisão, o acompanhamento do cliente, o pagamento e a comanda ainda não estão conectados. Não há cobrança real.
 
 Copie `.env.example` para `.env.local` e configure `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID` e `VITE_API_BASE_URL`. A chave Web do Firebase e o ID do projeto são públicos; nunca coloque credenciais de conta de serviço ou chaves privadas em variáveis `VITE_`, pois elas são incluídas no código entregue ao navegador. A API deve usar HTTPS, exceto testes em localhost.
 
@@ -116,3 +116,26 @@ As rotas do Administrador usam carregamento separado e funcionam nos modos demo/
 Arquivos: `src/operations/AdminApp.jsx` controla navegação e estado; `AdminCatalog.jsx`, `AdminSettings.jsx`, `AdminOrders.jsx` e `AdminStates.jsx` compõem as telas; `AdminUI.jsx` reutiliza os componentes existentes e acrescenta diálogo, campos e feedbacks; `adminData.js` fornece os dados fictícios; `admin.css` contém estilos isolados desta área.
 
 Validação: `npm run build`, `npm test` e `npm run test:e2e:admin`. Os testes de navegador cobrem 320, 412, 768, 1194 e 1440 px, ausência de overflow/requisições externas/erros JavaScript, cabeçalho/abas fixos, edição/cadastro, imagens locais, categorias, configurações, paginação, status por item, cancelamento parcial/integral, auditoria/CSV e recuperação de estados. O fluxo foi incluído no GitHub Actions, junto às verificações anteriores de cliente, Cozinha/Bar e Praça.
+
+
+## Primeira integração operacional: protótipo conectado
+
+As telas `/#/operacao/praca`, `/#/operacao/cozinha` e `/#/operacao/bar` são uma primeira interface conectada à API; as rotas visuais anteriores (`/#/praca`, `/#/cozinha`, `/#/bar` e `/#/admin`) continuam como demonstrações independentes. As telas conectadas não substituem ainda os painéis completos. A URL exige a configuração pública do Firebase e da API descrita acima.
+
+O gerente ativa a tela conectada com seu código de oito dígitos e o ID do restaurante. Cada tela usa uma identidade Firebase anônima técnica separada por setor e dispositivo/navegador, sem login individual para equipe. A praça abre uma mesa existente com o código de garçom ou gerente e gera um QR para a URL de entrada do cliente. O QR é apenas para teste: pode ser compartilhado e não valida presença. A praça pode consultar itens prontos e registrar retirada e entrega. Cozinha/bar consultam e atualizam sua própria fila. Use **Atualizar fila**: não há notificações nem atualização automática. Recarregar a tela solicita nova ativação.
+
+A abertura ainda depende de um restaurante e uma mesa já cadastrados, de códigos válidos, do segredo `STAFF_CODE_PEPPER` no backend e de uma API com essas operações efetivamente implantada. A tela de administrador e o fluxo real para criar o primeiro administrador com segundo fator ainda não estão conectados. Essa integração precisa ser validada antes de usar dados reais; não enviar códigos, conta de serviço ou o segredo ao chat ou ao repositório.
+
+O cliente conectado pode enviar um único produto de cada vez. Em caso de falha na resposta, a tentativa é mantida no `sessionStorage` da aba e repetida com o mesmo `requestId`, para evitar duplicação no backend; não limpe a aba/armazenamento antes de resolver uma tentativa pendente. A recuperação ao trocar de dispositivo ou limpar os dados, cancelamento de uma tentativa, múltiplos itens e divisão ainda precisam de desenvolvimento. O cardápio pode mudar entre visualização e pedido e o servidor revalida preço e disponibilidade.
+
+O formulário demonstrativo de produto permite marcar Bar e Cozinha simultaneamente; esse formulário ainda não salva no Firebase. Setores adicionais e modo conjunto existentes nas configurações visuais são somente simulação e não representam contratos do backend.
+
+### Teste integrado nos emuladores
+
+Além dos testes Playwright com respostas simuladas, o script abaixo cria restaurante, funcionários, mesa e produto **fictícios somente nos emuladores**. Exercita ativação, abertura, entrada do cliente, pedido, preparo em bar e cozinha e entrega parcial pela API Express e Firestore emulados. Precisa dos dois repositórios com dependências instaladas e Chromium. Na pasta do backend:
+
+```bash
+npx firebase emulators:exec --project demo-vamo-rachar --only auth,firestore 'node ../vamo-rachar-front-integracao-equipe/scripts/test-operations-integration.cjs'
+```
+
+Ajuste o caminho se o front estiver em outra pasta. O script não acessa o Firebase real nem executa pagamento. O GitHub Actions do front cobre os testes de navegador com respostas simuladas; esse teste integrado de dois repositórios é separado e ainda não roda no Actions.

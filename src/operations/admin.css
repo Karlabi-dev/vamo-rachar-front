@@ -33,3 +33,5 @@
 .admin-shell .admin-date input[type=date]{position:absolute;inset:0;width:100%;height:100%;min-height:0;opacity:0;cursor:pointer;padding:0;border:0}
 .admin-date:focus-within{outline:3px solid #267359;outline-offset:3px}.admin-row-actions .admin-text-button{padding:4px 0}
 @media(max-width:899px){.admin-row-actions .admin-text-button{padding:10px 0}}
+
+.admin-sector-options{border:0;padding:0;margin:18px 0}.admin-sector-options legend{font-weight:700;margin-bottom:10px}.admin-sector-options .admin-checkbox{margin:8px 0}

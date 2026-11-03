@@ -27,13 +27,37 @@ export function createApiClient({ baseUrl, getToken, fetchImpl = fetch }) {
     let data;
     try { data = await response.json(); } catch { throw new Error('Não foi possível interpretar a resposta do servidor.'); }
     if (!response.ok) {
-      const messages = { 'failed-precondition': 'A mesa não está aberta ou sua entrada não está disponível.', 'permission-denied': 'Você não tem acesso a esta mesa.', 'unauthenticated': 'Sua autenticação expirou. Tente novamente.', 'not-found': 'Mesa ou recurso não encontrado.' };
+      const messages = { 'failed-precondition': operation === 'joinTable' ? 'A mesa não está aberta ou sua entrada não está disponível.' : 'A operação não está disponível no estado atual. Confira os dados e tente novamente.', 'permission-denied': operation === 'joinTable' ? 'Você não tem acesso a esta mesa.' : 'Acesso não autorizado. Confira o código e a ativação do dispositivo.', 'unauthenticated': 'Sua autenticação expirou. Tente novamente.', 'not-found': 'Mesa ou recurso não encontrado.' };
       throw new Error(messages[data.error] || 'Não foi possível concluir a solicitação. Tente novamente.');
     }
     if (!data.result || typeof data.result !== 'object') throw new Error('Resposta inesperada do servidor.');
     return data.result;
   }
   return {
+    async activateDevice(restaurantId, screen, code) {
+      return call('activateSharedDevice', { restaurantId, screen, code });
+    },
+    async openTableWithCode(restaurantId, tableId, requestId, code) {
+      return call('openTableWithCode', { restaurantId, tableId, requestId, code });
+    },
+    async listWorkQueue(restaurantId, sector) {
+      const result = await call('listWorkQueue', { restaurantId, sector });
+      if (!Array.isArray(result.items)) throw new Error('Resposta da fila inválida.');
+      return result.items;
+    },
+    async listReadyItems(restaurantId) {
+      const result = await call('listReadyItems', { restaurantId });
+      if (!Array.isArray(result.items)) throw new Error('Resposta da fila inválida.');
+      return result.items;
+    },
+    async transitionItem(restaurantId, itemId, sector, action) {
+      return call('transitionItem', { restaurantId, itemId, sector, action });
+    },
+    async createOrder(order) {
+      const result = await call('createOrder', order);
+      if (!IDENTIFIER.test(result.orderId || '')) throw new Error('Resposta do pedido inválida.');
+      return result;
+    },
     async joinTable(table, name) {
       const displayName = typeof name === 'string' ? name.trim() : '';
       if (!displayName || displayName.length > 80) throw new Error('Informe um nome com até 80 caracteres.');
