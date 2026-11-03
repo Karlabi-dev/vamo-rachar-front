@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createFloorTables,createFloorOrders,floorCounts,tablePending,openFloorTable,attendFloorCall,closeFloorTable} from '../src/operations/floorData.js';
+test('floor fixture matches the reference counters and areas',()=>{const tables=createFloorTables();assert.deepEqual(floorCounts(tables),{available:2,open:6,attention:3,closing:1});assert.equal(tables.filter(t=>t.area==='Salão').length,8);assert.equal(tables.filter(t=>t.area==='Varanda').length,4);});
+test('opening an available mock table does not change an occupied table',()=>{const tables=createFloorTables();const opened=openFloorTable(tables,'06','Marina Santos');assert.equal(opened[5].state,'open');assert.equal(opened[5].people,0);assert.equal(opened[5].waiter,'Marina Santos');assert.equal(tables[5].state,'available');assert.equal(openFloorTable(tables,'12','Marina Santos')[11].waiter,'Lucas Oliveira');});
+test('answering the call leaves the unfinished item pending',()=>{const t=createFloorTables();assert.deepEqual(tablePending(t[11],createFloorOrders()),{items:1,calls:1});const next=attendFloorCall(t,'12');assert.deepEqual(tablePending(next[11],createFloorOrders()),{items:1,calls:0});assert.equal(next[11].state,'open');});
+test('closing a mock table makes only that table available',()=>{const t=createFloorTables();const next=closeFloorTable(t,'11');assert.equal(next[10].state,'available');assert.equal(next[10].people,0);assert.equal(t[10].state,'closing');assert.deepEqual(next[11],t[11]);});

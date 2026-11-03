@@ -10,13 +10,15 @@
     "test": "node --test tests/*.test.js",
     "test:e2e:demo": "playwright test --config=playwright.config.js",
     "test:e2e:api": "playwright test --config=playwright.connected.config.js",
-    "test:e2e:kitchen": "playwright test --config=playwright.kitchen.config.js"
+    "test:e2e:kitchen": "playwright test --config=playwright.kitchen.config.js",
+    "test:e2e:floor": "playwright test --config=playwright.floor.config.js"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
     "@fontsource/nunito-sans": "^5.1.0",
     "firebase": "^13.1.0",
     "lucide-react": "^0.468.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

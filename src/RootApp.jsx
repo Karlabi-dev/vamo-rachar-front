@@ -2,16 +2,17 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 const ClientDemo = lazy(() => import('./App.jsx'));
 const ConnectedApp = lazy(() => import('./ConnectedApp.jsx'));
 const KitchenApp = lazy(() => import('./operations/KitchenApp.jsx'));
-const isKitchenRoute = () => /^#\/(cozinha|bar)(\/|$|\?)/.test(window.location.hash);
+const PracaApp = lazy(() => import('./operations/PracaApp.jsx'));
+const getArea = () => /^#\/(cozinha|bar)(\/|$|\?)/.test(window.location.hash) ? 'kitchen' : /^#\/praca(\/|$|\?)/.test(window.location.hash) ? 'floor' : 'client';
 
 export default function RootApp() {
-  const [kitchen, setKitchen] = useState(isKitchenRoute);
+  const [area, setArea] = useState(getArea);
   useEffect(() => {
-    const update = () => setKitchen(isKitchenRoute());
+    const update = () => setArea(getArea());
     window.addEventListener('hashchange', update);
     return () => window.removeEventListener('hashchange', update);
   }, []);
   return <Suspense fallback={<p role="status" style={{ padding: 32 }}>Carregando…</p>}>
-    {kitchen ? <KitchenApp/> : import.meta.env.VITE_APP_MODE === 'demo' ? <ClientDemo/> : <ConnectedApp/>}
+    {area === 'kitchen' ? <KitchenApp/> : area === 'floor' ? <PracaApp/> : import.meta.env.VITE_APP_MODE === 'demo' ? <ClientDemo/> : <ConnectedApp/>}
   </Suspense>;
 }

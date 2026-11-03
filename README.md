@@ -71,8 +71,22 @@ Abra `/#/cozinha` para a fila de cozinha e `/#/bar` para dados fictícios do bar
 
 A fila de cozinha foi implementada a partir da referência visual e do contexto de design do frame Figma `110:29366`: Inter, oito cartões por mesa, recebimento e previsão, observações, destaque de entrega parcial, atrasos e espera pelo garçom. Usa quatro colunas em notebook/desktop, três ou duas em larguras intermediárias e uma em celulares. O cabeçalho e a navegação ficam fixos; não foi reproduzida a barra decorativa de navegador do design, conforme a orientação anterior sobre exibir o sistema sem moldura.
 
-`/#/cozinha/estados` lista loading, vazio, erro e atualização com sucesso. `Ver detalhes` abre **uma prévia local dos itens**, com confirmação para mudar o status de um item e retorno à fila. Essa prévia não é a reprodução da tela de detalhes do Figma: a consulta dessa referência, assim como das telas de Praça e Administrador, foi bloqueada pelo limite do plano Starter. Essas telas permanecem pendentes de imagens exportadas ou acesso liberado. Não há páginas de Praça ou Administrador implementadas nesta entrega parcial.
+`/#/cozinha/estados` lista loading, vazio, erro e atualização com sucesso. `Ver detalhes` abre **uma prévia local dos itens**, com confirmação para mudar o status de um item e retorno à fila. Essa prévia não é a reprodução da tela de detalhes do Figma: a consulta dessa referência e das telas de Administrador foi bloqueada pelo limite do plano Starter. Essas telas permanecem pendentes de imagens exportadas ou acesso liberado. A área de Praça foi adicionada posteriormente com os prints fornecidos pelo usuário, conforme a seção abaixo. O Administrador continua pendente.
 
 O estado da fila fica somente na memória e é reiniciado ao recarregar a página. Os pedidos parcialmente entregues continuam visíveis; quando todos os itens de um pedido fictício são marcados como entregues ao garçom, o cartão sai da fila local. Isso é uma demonstração visual, sem regra financeira, autenticação, API ou persistência em banco. A logo usa o arquivo original já existente no projeto. Os itens do Bar são exemplos criados para a demonstração, não uma cópia de uma tela de referência específica.
 
 Para executar os testes desta área, use `npm run test:e2e:kitchen` após instalar o Chromium do Playwright.
+
+## Praça em demonstração local
+
+A Praça foi implementada a partir dos cinco prints enviados pelo usuário, que representam quatro referências: painel de mesas, abertura de mesa, detalhes da Mesa 12 para tablet/computador e detalhes para celular (estes divididos nos dois últimos prints). As linhas azuis de seleção do Figma e a barra decorativa de navegador não fazem parte do sistema. A logo original e os componentes visuais existentes foram reutilizados. O cabeçalho e as abas Mesas e Chamadas permanecem fixos.
+
+- `/#/praca`: painel com 12 mesas fictícias, indicadores (02 disponíveis, 06 abertas, 03 em atenção, 01 finalizando), filtros por Salão/Varanda, grade/lista e alertas.
+- `/#/praca/abrir`: seleção de mesa disponível, garçom responsável e confirmação local da abertura; o resultado exibe o QR Code de demonstração e acesso à nova mesa.
+- `/#/praca/mesa/12`: pedido #1042, status de cada item, chamada, QR Code ampliável, clientes e encerramento desabilitado enquanto há pendências. No celular os cartões de QR Code e clientes antecedem o pedido; no tablet/computador eles ficam na coluna lateral.
+- `/#/praca/chamadas`: solicitações fictícias e confirmação local de atendimento.
+- `/#/praca/estados`: acesso a loading, vazio, erro e confirmação de encerramento. Uma mesa sem itens nem chamadas pendentes (por exemplo, a Mesa 11) permite testar a confirmação e o retorno ao painel.
+
+As interações alteram exclusivamente estados React em memória. Recarregar a página restaura os dados iniciais. Não há API, banco, autenticação, pagamento, geração de token ou sessão real. O QR é gerado localmente em SVG pela biblioteca `qrcode` e codifica somente texto com a indicação de DEMONSTRAÇÃO LOCAL; não aponta para um site e não dá acesso a uma mesa real. IDs, horários e nomes são fictícios. Essas rotas funcionam nos modos demo e api sem inicializar Firebase ou serviços externos.
+
+A apresentação usa quatro indicadores, três colunas de mesas com alertas laterais em telas grandes, reorganiza o painel em larguras intermediárias e muda a ordem dos cartões dos detalhes no celular. Foram adicionados testes em 320, 412, 768, 1194 e 1440 px, cobrindo overflow, ausência de requisições externas, abertura/encerramento local, atendimento, filtros, QR e estados de recuperação. Execute `npm run test:e2e:floor` após instalar o Chromium do Playwright.

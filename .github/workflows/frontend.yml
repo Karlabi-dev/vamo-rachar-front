@@ -19,4 +19,5 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e:demo
       - run: npm run test:e2e:kitchen
+      - run: npm run test:e2e:floor
       - run: npm run test:e2e:api
