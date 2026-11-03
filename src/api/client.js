@@ -28,7 +28,8 @@ export function createApiClient({ baseUrl, getToken, fetchImpl = fetch }) {
     try { data = await response.json(); } catch { throw new Error('Não foi possível interpretar a resposta do servidor.'); }
     if (!response.ok) {
       const messages = { 'failed-precondition': operation === 'joinTable' ? 'A mesa não está aberta ou sua entrada não está disponível.' : 'A operação não está disponível no estado atual. Confira os dados e tente novamente.', 'permission-denied': operation === 'joinTable' ? 'Você não tem acesso a esta mesa.' : operation.toLowerCase().includes('admin') || operation.toLowerCase().includes('employee') ? 'Sem permissão administrativa para este estabelecimento.' : 'Acesso não autorizado. Confira o código e a ativação do dispositivo.', 'unauthenticated': 'Sua autenticação expirou. Tente novamente.', 'not-found': 'Mesa ou recurso não encontrado.' };
-      throw new Error(messages[data.error] || 'Não foi possível concluir a solicitação. Tente novamente.');
+      const error = new Error(messages[data.error] || 'Não foi possível concluir a solicitação. Tente novamente.');
+      error.code = data.error; error.status = response.status; throw error;
     }
     if (!data.result || typeof data.result !== 'object') throw new Error('Resposta inesperada do servidor.');
     return data.result;
@@ -78,6 +79,36 @@ export function createApiClient({ baseUrl, getToken, fetchImpl = fetch }) {
     },
     async transitionItem(restaurantId, itemId, sector, action) {
       return call('transitionItem', { restaurantId, itemId, sector, action });
+    },
+    async listParticipants(restaurantId, sessionId) {
+      const result = await call('listSessionParticipants', {restaurantId, sessionId});
+      if (!Array.isArray(result.participants) || result.participants.some(p => !p || !IDENTIFIER.test(p.participantId || '') || typeof p.displayName !== 'string')) throw new Error('Resposta de participantes inválida.');
+      return result.participants;
+    },
+    async listInvitations(restaurantId, sessionId) {
+      const result = await call('listInvitations', {restaurantId, sessionId});
+      if (!Array.isArray(result.invitations) || result.invitations.some(i => !i || !IDENTIFIER.test(i.orderId || '') || !IDENTIFIER.test(i.itemId || '') || typeof i.name !== 'string' || !Number.isSafeInteger(i.quantity) || i.quantity < 1 || !Number.isSafeInteger(i.totalCents) || i.totalCents < 0 || !Number.isSafeInteger(i.amountCents) || i.amountCents < 0 || i.amountCents > i.totalCents)) throw new Error('Resposta de convites inválida.');
+      return result.invitations;
+    },
+    async respondToShare(restaurantId, sessionId, orderId, itemId, accept) {
+      const result = await call('respondToShare', {restaurantId, sessionId, orderId, itemId, accept});
+      if (!['accepted', 'rejected'].includes(result.acceptanceStatus)) throw new Error('Resposta de divisão inválida.');
+      return result;
+    },
+    async listMyOrders(restaurantId, sessionId) {
+      const result = await call('listMyOrders', {restaurantId, sessionId});
+      if (!Array.isArray(result.orderIds) || result.orderIds.some(id => !IDENTIFIER.test(id))) throw new Error('Resposta de pedidos inválida.');
+      return result.orderIds;
+    },
+    async listMyOrderItems(restaurantId, sessionId, orderId) {
+      const result = await call('listMyOrderItems', {restaurantId, sessionId, orderId});
+      if (typeof result.isOwner !== 'boolean' || !Array.isArray(result.items) || result.items.some(i => !i || !IDENTIFIER.test(i.itemId || '') || typeof i.name !== 'string' || !Number.isSafeInteger(i.quantity) || i.quantity < 1 || !Number.isSafeInteger(i.totalCents) || i.totalCents < 0 || !Number.isSafeInteger(i.amountCents) || i.amountCents < 0 || i.amountCents > i.totalCents || typeof i.status !== 'string')) throw new Error('Resposta de itens inválida.');
+      return result;
+    },
+    async resolveRejectedSplit(data) {
+      const result = await call('resolveRejectedSplit', data);
+      if (result.action !== data.action || (result.itemId !== null && !IDENTIFIER.test(result.itemId || ''))) throw new Error('Resposta de resolução inválida.');
+      return result;
     },
     async createOrder(order) {
       const result = await call('createOrder', order);

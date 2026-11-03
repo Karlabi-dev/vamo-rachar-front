@@ -48,7 +48,7 @@ async function main() {
     await page.goto(`http://127.0.0.1:5175/?restaurantId=${restaurantId}&tableId=mesa-13`);
     await page.getByLabel('Como podemos te chamar?').fill('Ana');
     await page.getByRole('button', { name: 'Entrar na mesa' }).click();
-    await page.getByText('Suco do teste').waitFor({ timeout: 20000 });
+    await page.getByText('Suco do teste', { exact: true }).waitFor({ timeout: 20000 });
     assert.equal(await page.getByText('R$ 12,50').count(), 1);
     const people = await rest.collection('sessions').doc('sessao-teste').collection('participants').get();
     assert.equal(people.size, 1);

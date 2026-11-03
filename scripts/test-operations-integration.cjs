@@ -42,8 +42,8 @@ async function main() {
   async function activate(page){await page.getByLabel('ID do restaurante').fill(restaurantId);await page.getByLabel('Código do gerente').fill('12345678');await page.getByRole('button',{name:'Ativar dispositivo'}).click();await page.getByText('Dispositivo ativado.').waitFor({timeout:20000});}
   await activate(plaza);await plaza.getByLabel('ID da mesa').fill('mesa-13');await plaza.getByLabel('Código do funcionário').fill('87654321');await plaza.getByRole('button',{name:'Abrir mesa',exact:true}).click();await plaza.getByRole('img',{name:'QR Code de entrada da mesa mesa-13'}).waitFor({timeout:20000});
   const link=await plaza.getByRole('link',{name:'Abrir entrada do cliente'}).getAttribute('href');
-  const client=await context.newPage();await client.goto(link);await client.getByLabel('Como podemos te chamar?').fill('Ana');await client.getByRole('button',{name:'Entrar na mesa'}).click();await client.getByText('Combo fictício').waitFor({timeout:20000});
-  await client.getByRole('button',{name:'Pedir 1 unidade'}).click();
+  const client=await context.newPage();await client.goto(link);await client.getByLabel('Como podemos te chamar?').fill('Ana');await client.getByRole('button',{name:'Entrar na mesa'}).click();await client.getByText('Combo fictício',{exact:true}).waitFor({timeout:20000});
+  await client.getByRole('button',{name:'Pedir 1 unidade'}).click();await client.getByRole('button',{name:'Confirmar pedido'}).click();
   await client.getByText(/Pedido de Combo fictício enviado/).waitFor({timeout:20000});
   for(const sector of ['cozinha','bar']){
    const page=await context.newPage();await page.goto(`http://127.0.0.1:5178/#/operacao/${sector}`);await activate(page);await page.getByRole('button',{name:'Atualizar fila'}).click();await page.getByRole('heading',{name:'1× Combo fictício'}).waitFor();await page.getByRole('button',{name:'Iniciar preparo'}).click();await page.getByRole('button',{name:'Marcar pronto'}).click();await page.getByText('Pronto para retirada').waitFor();

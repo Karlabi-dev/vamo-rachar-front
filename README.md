@@ -1,6 +1,6 @@
 # VamoRachar! — Front-end
 
-Aplicação em React + Vite com protótipo visual de 29 telas do cliente e integração inicial de entrada, cardápio e pedido individual de uma unidade. Inclui áreas de Cozinha/Bar, Praça e Administrador com dados fictícios e estado local, além de telas conectadas experimentais para a operação.
+Aplicação em React + Vite com protótipo visual de 29 telas do cliente e integração inicial de entrada, cardápio, pedido individual e divisão de uma unidade. Inclui áreas de Cozinha/Bar, Praça e Administrador com dados fictícios e estado local, além de telas conectadas experimentais para a operação.
 
 ## Rodar localmente
 
@@ -45,7 +45,7 @@ O cabeçalho permanece fixo no topo e o menu do sistema na parte inferior durant
 
 ## Integração inicial: entrada e cardápio
 
-O modo conectado identifica a mesa pelo endereço, autentica o cliente anonimamente no Firebase e chama `joinTable` e `listMenu` no backend. O cardápio usa preço em centavos retornado pela API. O modo conectado também permite criar um pedido individual de uma unidade por vez. A divisão, o acompanhamento do cliente, o pagamento e a comanda ainda não estão conectados. Não há cobrança real.
+O modo conectado identifica a mesa pelo endereço, autentica o cliente anonimamente no Firebase e chama `joinTable` e `listMenu` no backend. O cardápio usa preço em centavos retornado pela API. O modo conectado permite pedido de uma unidade por vez, divisão com participantes da sessão, aceite ou recusa de convites e resolução da recusa. A visão completa de acompanhamento, o pagamento e a comanda ainda não estão conectados. Não há cobrança real. A versão integrada depende da branch correspondente do backend, que valida o preço apresentado.
 
 Copie `.env.example` para `.env.local` e configure `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID` e `VITE_API_BASE_URL`. A chave Web do Firebase e o ID do projeto são públicos; nunca coloque credenciais de conta de serviço ou chaves privadas em variáveis `VITE_`, pois elas são incluídas no código entregue ao navegador. A API deve usar HTTPS, exceto testes em localhost.
 
@@ -126,7 +126,7 @@ O gerente ativa a tela conectada com seu código de oito dígitos e o ID do rest
 
 A abertura ainda depende de um restaurante e uma mesa já cadastrados, de códigos válidos, do segredo `STAFF_CODE_PEPPER` no backend e de uma API com essas operações efetivamente implantada. A rota `/#/operacao/admin` oferece uma interface conectada inicial de produtos e códigos da equipe, com e-mail/senha e segundo fator por aplicativo autenticador TOTP. Ela exige uma conta já provisionada, segundo fator configurado e vínculo administrativo ativo no estabelecimento. O cadastro do primeiro administrador, a recuperação e a verificação da disponibilidade/custos do TOTP no plano Firebase escolhido ainda estão pendentes. Os testes com fator simulado não comprovam acesso MFA real. Não enviar senhas, códigos, conta de serviço ou o segredo ao chat ou ao repositório.
 
-O cliente conectado pode enviar um único produto de cada vez. Em caso de falha na resposta, a tentativa é mantida no `sessionStorage` da aba e repetida com o mesmo `requestId`, para evitar duplicação no backend; não limpe a aba/armazenamento antes de resolver uma tentativa pendente. A recuperação ao trocar de dispositivo ou limpar os dados, cancelamento de uma tentativa, múltiplos itens e divisão ainda precisam de desenvolvimento. O cardápio pode mudar entre visualização e pedido e o servidor revalida preço e disponibilidade.
+O cliente conectado pode enviar um único produto por pedido e selecionar até 19 convidados. O front apresenta as partes usando a ordem de identificadores do backend, e o convidado vê o valor retornado pelo servidor antes de aceitar. Se a divisão for recusada, o responsável pode assumir, cancelar ou convidar novamente; as listagens são atualizadas manualmente. Em falha de resposta, a tentativa de pedido ou resolução fica no `sessionStorage` e usa o mesmo `requestId` na repetição; não limpe a aba/armazenamento antes de resolver. A recuperação ao trocar de dispositivo ou limpar os dados, expiração de convite e múltiplos itens ainda precisam de desenvolvimento. O preço apresentado é enviado como valor esperado e precisa ser conferido na transação do backend antes da criação.
 
 O formulário demonstrativo de produto permite marcar Bar e Cozinha simultaneamente, mas não salva no Firebase. O formulário da rota administrativa conectada grava nome, descrição, preço, disponibilidade, destinos e URL HTTPS opcional pela API; ainda não faz upload de foto nem persiste categorias. A página conectada mostra o código de cada funcionário somente uma vez, com opções de troca e desativação. Setores adicionais e modo conjunto existentes nas configurações visuais são somente simulação e não representam contratos do backend.
 
@@ -150,3 +150,14 @@ npx firebase emulators:exec --project demo-vamo-rachar --only auth,firestore 'no
 ```
 
 O GitHub Actions do front executa os testes de interface com autenticação e API simuladas. O teste integrado de dois repositórios acima é separado e ainda não roda no Actions.
+
+
+### Teste de divisão nos emuladores
+
+A branch do front com divisão depende da branch `validar-preco-pedido` do backend, que aceita `expectedUnitPriceCents` e retorna `isOwner` na listagem de itens. **Confirme Actions e revisão nos dois repositórios e atualize o backend antes de publicar o front.** Com ambos checkouts e dependências instaladas, a partir da pasta do backend:
+
+```bash
+VAMO_BACKEND_PATH=../vamo-rachar-backend-divisao npx firebase emulators:exec --project demo-vamo-rachar --only auth,firestore 'node ../vamo-rachar-front-integracao-equipe/scripts/test-split-integration.cjs'
+```
+
+Ajuste os caminhos conforme as pastas locais. O script usa duas identidades anônimas e dados fictícios nos emuladores para verificar recusa e assunção, aceite, distribuição de centavos e recusa de preço alterado. Não testa cobrança real. Atualize manualmente convites e pedidos; notificações e expiração de convites permanecem pendentes.

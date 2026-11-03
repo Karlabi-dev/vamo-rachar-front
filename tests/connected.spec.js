@@ -20,9 +20,9 @@ test('entra na mesa e exibe cardápio retornado pelo servidor', async ({ page })
   await page.goto('/?restaurantId=restaurante-teste&tableId=mesa-13');
   await page.getByLabel('Como podemos te chamar?').fill('Ana');
   await page.getByRole('button', { name: 'Entrar na mesa' }).click();
-  await expect(page.getByText('Suco da casa')).toBeVisible();
+  await expect(page.getByText('Suco da casa',{exact:true})).toBeVisible();
   await expect(page.getByText('R$ 12,50')).toBeVisible();
-  await expect(page.getByText(/Divisão e pagamento ainda não estão conectados/)).toBeVisible();
+  await expect(page.getByText(/O pagamento ainda não está conectado/)).toBeVisible();
   expect(seen).toHaveLength(2);
   expect(seen[0].authorization).toBe(`Bearer ${jwt}`);
   expect(seen[0].data).toEqual({ restaurantId: 'restaurante-teste', tableId: 'mesa-13', displayName: 'Ana' });
@@ -75,7 +75,7 @@ test('falha do cardápio permite tentar novamente sem criar nova entrada', async
   await expect(page.getByRole('heading', { name: 'Entrada confirmada' })).toBeVisible();
   await expect(page.getByRole('alert')).toBeVisible();
   await page.getByRole('button', { name: 'Tentar carregar cardápio' }).click();
-  await expect(page.getByText('Suco da casa')).toBeVisible();
+  await expect(page.getByText('Suco da casa',{exact:true})).toBeVisible();
   expect(joins).toBe(1);
   expect(menus).toBe(2);
 });
@@ -153,12 +153,12 @@ test('envia pedido individual e repete a mesma tentativa depois de falha de rede
   });
   await page.goto('/?restaurantId=restaurante-teste&tableId=mesa-13');
   await page.getByLabel('Como podemos te chamar?').fill('Ana');await page.getByRole('button',{name:'Entrar na mesa'}).click();
-  await page.getByRole('button',{name:'Pedir 1 unidade'}).click();
+  await page.getByRole('button',{name:'Pedir 1 unidade'}).click();await page.getByRole('button',{name:'Confirmar pedido'}).click();
   await expect(page.getByRole('alert')).toContainText('mesma tentativa');
   await page.getByRole('button',{name:'Tentar confirmar pedido'}).click();
   await expect(page.getByRole('status')).toContainText('Pedido de Suco enviado');
   expect(orders).toHaveLength(2);expect(orders[0]).toEqual(orders[1]);
-  expect(orders[0]).toMatchObject({restaurantId:'restaurante-teste',sessionId:'sessao1',items:[{menuItemId:'suco',quantity:1}]});
+  expect(orders[0]).toMatchObject({restaurantId:'restaurante-teste',sessionId:'sessao1',items:[{menuItemId:'suco',quantity:1,expectedUnitPriceCents:1250}]});
 });
 
 const adminJwt = (() => {
@@ -224,4 +224,68 @@ test('acesso administrativo sem segundo fator é recusado antes de acessar a API
  await page.route('https://api.example.test/**',async route=>{calls++;await route.abort();});
  await page.goto('/#/operacao/admin');await page.getByLabel('ID do restaurante').fill('teste');await page.getByLabel('E-mail').fill('admin@example.test');await page.getByLabel('Senha').fill('senha-ficticia');await page.getByRole('button',{name:'Continuar'}).click();
  await expect(page.getByRole('alert')).toContainText('duas etapas');await expect(page.getByRole('heading',{name:'Produtos',exact:true})).toHaveCount(0);expect(calls).toBe(0);
+});
+
+test('cliente revisa divisão, envia convites e recebe resposta de aceite', async ({page})=>{
+ const calls=[];
+ await page.route('https://identitytoolkit.googleapis.com/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const json=route.request().url().includes('accounts:lookup')?{users:[{localId:'participante1',providerUserInfo:[]}]}:{idToken:jwt,refreshToken:'refresh-test',localId:'participante1',expiresIn:'3600'};await route.fulfill({status:200,headers:cors,json});
+ });
+ await page.route('https://api.example.test/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const op=route.request().url().split('/').pop(),data=route.request().postDataJSON();calls.push({op,data});
+  const responses={joinTable:{sessionId:'sessao1',participantId:'participante1'},listMenu:{items:[{id:'fritas',name:'Fritas',priceCents:3101}]},listSessionParticipants:{participants:[{participantId:'participante1',displayName:'Ana'},{participantId:'participante2',displayName:'Bruno'}]},createOrder:{orderId:'pedido1'},listInvitations:{invitations:[{orderId:'pedido2',itemId:'item2',name:'Suco',quantity:1,totalCents:1000,amountCents:500}]},respondToShare:{acceptanceStatus:'accepted',status:'received'}};
+  if(!responses[op])throw new Error(`Operação inesperada: ${op}`);await route.fulfill({status:200,headers:cors,json:{result:responses[op]}});
+ });
+ await page.goto('/?restaurantId=restaurante-teste&tableId=mesa-13');await page.getByLabel('Como podemos te chamar?').fill('Ana');await page.getByRole('button',{name:'Entrar na mesa'}).click();
+ await page.getByRole('button',{name:'Dividir Fritas'}).click();await page.getByLabel('Bruno').check();
+ await expect(page.getByText(/Sua parte:/).first()).toContainText('R$');await page.getByRole('button',{name:'Enviar convites'}).click();
+ await expect(page.getByRole('status')).toContainText('aguarda o aceite de todos');
+ expect(calls.find(c=>c.op==='createOrder').data).toMatchObject({restaurantId:'restaurante-teste',sessionId:'sessao1',items:[{menuItemId:'fritas',quantity:1,expectedUnitPriceCents:3101,inviteeIds:['participante2']}]});
+ await page.getByRole('button',{name:'Atualizar convites'}).click();await expect(page.getByText(/Total do item:/)).toContainText('R$');
+ await page.getByRole('button',{name:'Aceitar Suco'}).click();await expect(page.getByRole('status')).toContainText('Sua parte foi aceita');
+ expect(calls.find(c=>c.op==='respondToShare').data).toEqual({restaurantId:'restaurante-teste',sessionId:'sessao1',orderId:'pedido2',itemId:'item2',accept:true});
+});
+
+test('preço alterado recusa pedido e libera nova revisão',async({page})=>{
+ await page.route('https://identitytoolkit.googleapis.com/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const json=route.request().url().includes('accounts:lookup')?{users:[{localId:'participante1',providerUserInfo:[]}]}:{idToken:jwt,refreshToken:'refresh-test',localId:'participante1',expiresIn:'3600'};await route.fulfill({status:200,headers:cors,json});
+ });
+ await page.route('https://api.example.test/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const op=route.request().url().split('/').pop();
+  if(op==='createOrder')return route.fulfill({status:400,headers:cors,json:{error:'failed-precondition'}});
+  const result=op==='joinTable'?{sessionId:'sessao1',participantId:'participante1'}:{items:[{id:'suco',name:'Suco',priceCents:1250}]};
+  await route.fulfill({status:200,headers:cors,json:{result}});
+ });
+ await page.goto('/?restaurantId=restaurante-teste&tableId=mesa-13');await page.getByLabel('Como podemos te chamar?').fill('Ana');await page.getByRole('button',{name:'Entrar na mesa'}).click();
+ await page.getByRole('button',{name:'Pedir 1 unidade'}).click();await page.getByRole('button',{name:'Confirmar pedido'}).click();
+ await expect(page.getByRole('alert')).toContainText('pedido não foi criado');await expect(page.getByRole('button',{name:'Pedir 1 unidade'})).toBeEnabled();await expect(page.getByRole('button',{name:'Tentar confirmar pedido'})).toHaveCount(0);
+});
+
+test('retoma resolução recusada usando o mesmo identificador após resposta perdida',async({page})=>{
+ const requests=[];
+ await page.route('https://identitytoolkit.googleapis.com/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const json=route.request().url().includes('accounts:lookup')?{users:[{localId:'participante1',providerUserInfo:[]}]}:{idToken:jwt,refreshToken:'refresh-test',localId:'participante1',expiresIn:'3600'};await route.fulfill({status:200,headers:cors,json});
+ });
+ await page.route('https://api.example.test/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const op=route.request().url().split('/').pop();let result;
+  if(op==='joinTable')result={sessionId:'sessao1',participantId:'participante1'};
+  else if(op==='listMenu')result={items:[{id:'fritas',name:'Fritas',priceCents:3100}]};
+  else if(op==='listMyOrders')result={orderIds:['pedido1']};
+  else if(op==='listMyOrderItems')result={isOwner:true,items:[{itemId:'item1',name:'Fritas',quantity:1,totalCents:3100,amountCents:1550,status:requests.length>1?'cancelled':'split_rejected'}]};
+  else if(op==='resolveRejectedSplit'){
+   requests.push(route.request().postDataJSON());if(requests.length===1)return route.fulfill({status:503,headers:cors,json:{error:'unavailable'}});
+   result={itemId:'novo-item',action:'assume'};
+  } else throw new Error(`Operação inesperada: ${op}`);
+  await route.fulfill({status:200,headers:cors,json:{result}});
+ });
+ await page.goto('/?restaurantId=restaurante-teste&tableId=mesa-13');await page.getByLabel('Como podemos te chamar?').fill('Ana');await page.getByRole('button',{name:'Entrar na mesa'}).click();await page.getByRole('button',{name:'Atualizar pedidos'}).click();
+ page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Assumir Fritas'}).click();await expect(page.getByRole('alert')).toContainText('mesma operação');
+ await page.getByRole('button',{name:'Tentar confirmar alteração'}).click();await expect(page.getByRole('status')).toContainText('assumiu o item integralmente');
+ expect(requests).toHaveLength(2);expect(requests[0]).toEqual(requests[1]);expect(requests[0]).toMatchObject({orderId:'pedido1',itemId:'item1',action:'assume',inviteeIds:[]});
 });
