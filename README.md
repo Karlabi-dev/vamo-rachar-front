@@ -1,6 +1,6 @@
 # VamoRachar! — Front-end
 
-Aplicação em React + Vite com protótipo visual de 29 telas do cliente e uma primeira integração de entrada na mesa e consulta ao cardápio. As telas de equipe ainda não estão implementadas.
+Aplicação em React + Vite com protótipo visual de 29 telas do cliente e uma primeira integração de entrada na mesa e consulta ao cardápio. Inclui também áreas de Cozinha/Bar, Praça e Administrador com dados fictícios e estado local.
 
 ## Rodar localmente
 
@@ -71,7 +71,7 @@ Abra `/#/cozinha` para a fila de cozinha e `/#/bar` para dados fictícios do bar
 
 A fila de cozinha foi implementada a partir da referência visual e do contexto de design do frame Figma `110:29366`: Inter, oito cartões por mesa, recebimento e previsão, observações, destaque de entrega parcial, atrasos e espera pelo garçom. Usa quatro colunas em notebook/desktop, três ou duas em larguras intermediárias e uma em celulares. O cabeçalho e a navegação ficam fixos; não foi reproduzida a barra decorativa de navegador do design, conforme a orientação anterior sobre exibir o sistema sem moldura.
 
-`/#/cozinha/estados` lista loading, vazio, erro e atualização com sucesso. `Ver detalhes` abre **uma prévia local dos itens**, com confirmação para mudar o status de um item e retorno à fila. Essa prévia não é a reprodução da tela de detalhes do Figma: a consulta dessa referência e das telas de Administrador foi bloqueada pelo limite do plano Starter. Essas telas permanecem pendentes de imagens exportadas ou acesso liberado. A área de Praça foi adicionada posteriormente com os prints fornecidos pelo usuário, conforme a seção abaixo. O Administrador continua pendente.
+`/#/cozinha/estados` lista loading, vazio, erro e atualização com sucesso. `Ver detalhes` abre **uma prévia local dos itens**, com confirmação para mudar o status de um item e retorno à fila. Essa prévia não é a reprodução da tela de detalhes do Figma: a consulta dessa referência foi bloqueada pelo limite do plano Starter. A reprodução fiel dos detalhes da Cozinha ainda depende de uma referência legível. Praça e Administrador foram adicionados posteriormente com os prints fornecidos pelo usuário, conforme as seções abaixo.
 
 O estado da fila fica somente na memória e é reiniciado ao recarregar a página. Os pedidos parcialmente entregues continuam visíveis; quando todos os itens de um pedido fictício são marcados como entregues ao garçom, o cartão sai da fila local. Isso é uma demonstração visual, sem regra financeira, autenticação, API ou persistência em banco. A logo usa o arquivo original já existente no projeto. Os itens do Bar são exemplos criados para a demonstração, não uma cópia de uma tela de referência específica.
 
@@ -90,3 +90,29 @@ A Praça foi implementada a partir dos cinco prints enviados pelo usuário, que 
 As interações alteram exclusivamente estados React em memória. Recarregar a página restaura os dados iniciais. Não há API, banco, autenticação, pagamento, geração de token ou sessão real. O QR é gerado localmente em SVG pela biblioteca `qrcode` e codifica somente texto com a indicação de DEMONSTRAÇÃO LOCAL; não aponta para um site e não dá acesso a uma mesa real. IDs, horários e nomes são fictícios. Essas rotas funcionam nos modos demo e api sem inicializar Firebase ou serviços externos.
 
 A apresentação usa quatro indicadores, três colunas de mesas com alertas laterais em telas grandes, reorganiza o painel em larguras intermediárias e muda a ordem dos cartões dos detalhes no celular. Foram adicionados testes em 320, 412, 768, 1194 e 1440 px, cobrindo overflow, ausência de requisições externas, abertura/encerramento local, atendimento, filtros, QR e estados de recuperação. Execute `npm run test:e2e:floor` após instalar o Chromium do Playwright.
+
+
+## Administrador em demonstração local
+
+Implementado com os nove prints enviados: pedidos, cancelamento, auditoria, configurações, cardápio para computador/tablet, edição de produto, painel de estados e cardápio para celular (os dois últimos prints compõem uma única tela). A barra decorativa de navegador e as linhas azuis de seleção do Figma foram omitidas. A logo original, os componentes compartilhados e a tecnologia existente foram preservados. Cabeçalho e abas permanecem fixos.
+
+| Endereço | Tela e interações locais |
+| --- | --- |
+| `/#/admin` | Cardápio: seis produtos, categorias, busca por nome/descrição, filtros por setor, disponibilidade e acesso à edição. No celular, cards e categorias em duas colunas substituem a tabela e a lateral. |
+| `/#/admin/produto/burger` | Edição: nome, descrição, categoria, preço em centavos, setor, disponibilidade e prévia de imagem JPG/PNG até 5 MB. Valida campos obrigatórios antes de salvar em memória. |
+| `/#/admin/produto/novo` | Cadastro visual de um produto fictício. |
+| `/#/admin/configuracoes` | Preparo junto/separado, taxa sugerida, mesas, ambientes e dispositivos fictícios. Modais adicionam setor, mesa ou dispositivo e editam mesa/vínculo; Salvar configurações aplica somente à demonstração. |
+| `/#/admin/pedidos` | Nove pedidos fictícios, indicadores, busca, filtros por setor/status/data e paginação de oito registros. |
+| `/#/admin/pedido/1042` | Detalhes do pedido com status individuais por item. |
+| `/#/admin/cancelar/1048` | Etapas de token demonstrativo, seleção de item/pedido, motivo obrigatório, confirmação e resultado; mantém os outros itens ao simular cancelamento parcial. |
+| `/#/admin/auditoria` | Histórico fictício, destaque de evento, filtros e exportação CSV local. Registros não possuem controles de edição/exclusão. |
+| `/#/admin/estados` | Exemplos de carregamento, vazio, erro com dados preservados e sucesso com QR demonstrativo. |
+| `/#/admin/loading`, `/#/admin/vazio`, `/#/admin/erro` | Estados alternativos do cardápio e recuperação para a visualização normal. |
+
+O token **123456** é público e serve exclusivamente para avançar as etapas visuais. Não representa autenticação ou autorização real. É apagado do campo após a validação local e não é incluído no histórico ou CSV. Uma confirmação consome essa autorização de demonstração. Não há backend, API, banco, pagamento, vínculo real de dispositivo ou persistência nesta área. Tudo é estado React em memória e é restaurado ao recarregar a página. Cada área operacional tem seu próprio conjunto de dados mockados; alterações do Administrador não são propagadas às outras áreas nem ao cliente conectado.
+
+As rotas do Administrador usam carregamento separado e funcionam nos modos demo/api sem inicializar Firebase ou o cliente conectado. Todas as fontes e fotos são locais. As fotos foram recortadas dos prints e têm resolução limitada pela referência. A contagem do cardápio é calculada pelos seis produtos exibidos, mantendo os indicadores coerentes entre computador e celular.
+
+Arquivos: `src/operations/AdminApp.jsx` controla navegação e estado; `AdminCatalog.jsx`, `AdminSettings.jsx`, `AdminOrders.jsx` e `AdminStates.jsx` compõem as telas; `AdminUI.jsx` reutiliza os componentes existentes e acrescenta diálogo, campos e feedbacks; `adminData.js` fornece os dados fictícios; `admin.css` contém estilos isolados desta área.
+
+Validação: `npm run build`, `npm test` e `npm run test:e2e:admin`. Os testes de navegador cobrem 320, 412, 768, 1194 e 1440 px, ausência de overflow/requisições externas/erros JavaScript, cabeçalho/abas fixos, edição/cadastro, imagens locais, categorias, configurações, paginação, status por item, cancelamento parcial/integral, auditoria/CSV e recuperação de estados. O fluxo foi incluído no GitHub Actions, junto às verificações anteriores de cliente, Cozinha/Bar e Praça.

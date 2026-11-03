@@ -11,7 +11,8 @@
     "test:e2e:demo": "playwright test --config=playwright.config.js",
     "test:e2e:api": "playwright test --config=playwright.connected.config.js",
     "test:e2e:kitchen": "playwright test --config=playwright.kitchen.config.js",
-    "test:e2e:floor": "playwright test --config=playwright.floor.config.js"
+    "test:e2e:floor": "playwright test --config=playwright.floor.config.js",
+    "test:e2e:admin": "playwright test --config=playwright.admin.config.js"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
