@@ -124,11 +124,11 @@ As telas `/#/operacao/praca`, `/#/operacao/cozinha` e `/#/operacao/bar` são uma
 
 O gerente ativa a tela conectada com seu código de oito dígitos e o ID do restaurante. Cada tela usa uma identidade Firebase anônima técnica separada por setor e dispositivo/navegador, sem login individual para equipe. A praça abre uma mesa existente com o código de garçom ou gerente e gera um QR para a URL de entrada do cliente. O QR é apenas para teste: pode ser compartilhado e não valida presença. A praça pode consultar itens prontos e registrar retirada e entrega. Cozinha/bar consultam e atualizam sua própria fila. Use **Atualizar fila**: não há notificações nem atualização automática. Recarregar a tela solicita nova ativação.
 
-A abertura ainda depende de um restaurante e uma mesa já cadastrados, de códigos válidos, do segredo `STAFF_CODE_PEPPER` no backend e de uma API com essas operações efetivamente implantada. A tela de administrador e o fluxo real para criar o primeiro administrador com segundo fator ainda não estão conectados. Essa integração precisa ser validada antes de usar dados reais; não enviar códigos, conta de serviço ou o segredo ao chat ou ao repositório.
+A abertura ainda depende de um restaurante e uma mesa já cadastrados, de códigos válidos, do segredo `STAFF_CODE_PEPPER` no backend e de uma API com essas operações efetivamente implantada. A rota `/#/operacao/admin` oferece uma interface conectada inicial de produtos e códigos da equipe, com e-mail/senha e segundo fator por aplicativo autenticador TOTP. Ela exige uma conta já provisionada, segundo fator configurado e vínculo administrativo ativo no estabelecimento. O cadastro do primeiro administrador, a recuperação e a verificação da disponibilidade/custos do TOTP no plano Firebase escolhido ainda estão pendentes. Os testes com fator simulado não comprovam acesso MFA real. Não enviar senhas, códigos, conta de serviço ou o segredo ao chat ou ao repositório.
 
 O cliente conectado pode enviar um único produto de cada vez. Em caso de falha na resposta, a tentativa é mantida no `sessionStorage` da aba e repetida com o mesmo `requestId`, para evitar duplicação no backend; não limpe a aba/armazenamento antes de resolver uma tentativa pendente. A recuperação ao trocar de dispositivo ou limpar os dados, cancelamento de uma tentativa, múltiplos itens e divisão ainda precisam de desenvolvimento. O cardápio pode mudar entre visualização e pedido e o servidor revalida preço e disponibilidade.
 
-O formulário demonstrativo de produto permite marcar Bar e Cozinha simultaneamente; esse formulário ainda não salva no Firebase. Setores adicionais e modo conjunto existentes nas configurações visuais são somente simulação e não representam contratos do backend.
+O formulário demonstrativo de produto permite marcar Bar e Cozinha simultaneamente, mas não salva no Firebase. O formulário da rota administrativa conectada grava nome, descrição, preço, disponibilidade, destinos e URL HTTPS opcional pela API; ainda não faz upload de foto nem persiste categorias. A página conectada mostra o código de cada funcionário somente uma vez, com opções de troca e desativação. Setores adicionais e modo conjunto existentes nas configurações visuais são somente simulação e não representam contratos do backend.
 
 ### Teste integrado nos emuladores
 
@@ -139,3 +139,14 @@ npx firebase emulators:exec --project demo-vamo-rachar --only auth,firestore 'no
 ```
 
 Ajuste o caminho se o front estiver em outra pasta. O script não acessa o Firebase real nem executa pagamento. O GitHub Actions do front cobre os testes de navegador com respostas simuladas; esse teste integrado de dois repositórios é separado e ainda não roda no Actions.
+
+
+### Teste administrativo nos emuladores
+
+O teste abaixo cria dados fictícios de restaurante e administrador nos emuladores e verifica a interface conectada, escrita de produto e código da equipe no Firestore emulado e recusa de token sem segundo fator. **O desafio e o token com segundo fator são simulados; não provam disponibilidade ou funcionamento do MFA real.** Execute na pasta do backend, depois de instalar as dependências dos dois repositórios e o Chromium:
+
+```bash
+npx firebase emulators:exec --project demo-vamo-rachar --only auth,firestore 'node ../vamo-rachar-front-integracao-equipe/scripts/test-admin-integration.cjs'
+```
+
+O GitHub Actions do front executa os testes de interface com autenticação e API simuladas. O teste integrado de dois repositórios acima é separado e ainda não roda no Actions.

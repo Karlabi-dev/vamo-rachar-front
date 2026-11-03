@@ -160,3 +160,68 @@ test('envia pedido individual e repete a mesma tentativa depois de falha de rede
   expect(orders).toHaveLength(2);expect(orders[0]).toEqual(orders[1]);
   expect(orders[0]).toMatchObject({restaurantId:'restaurante-teste',sessionId:'sessao1',items:[{menuItemId:'suco',quantity:1}]});
 });
+
+const adminJwt = (() => {
+  const part = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return `${part({alg:'none',typ:'JWT'})}.${part({iss:'https://securetoken.google.com/demo-vamo',aud:'demo-vamo',sub:'admin-1',user_id:'admin-1',iat:1900000000,exp:4100000000,auth_time:1900000000,firebase:{sign_in_provider:'password',sign_in_second_factor:'totp'}})}.teste`;
+})();
+test('administrador valida segundo fator e salva produto e código da equipe pela API',async({page})=>{
+  const calls=[]; let product=null; let employee=null;
+  await page.route('https://identitytoolkit.googleapis.com/**',async route=>{
+    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+    const url=route.request().url();
+    let json;
+    if(url.includes('accounts:signInWithPassword')) json={localId:'admin-1',email:'admin@example.test',mfaPendingCredential:'desafio-ficticio',mfaInfo:[{mfaEnrollmentId:'totp-id',displayName:'Autenticador',enrolledAt:'2026-01-01T00:00:00Z',totpInfo:{}}]};
+    else if(url.includes('mfaSignIn:finalize')) json={idToken:adminJwt,refreshToken:'refresh-admin'};
+    else if(url.includes('accounts:lookup')) json={users:[{localId:'admin-1',email:'admin@example.test',providerUserInfo:[]}]};
+    else throw new Error(`Operação Auth inesperada: ${url}`);
+    await route.fulfill({status:200,headers:cors,json});
+  });
+  await page.route('https://api.example.test/**',async route=>{
+    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+    const operation=route.request().url().split('/').pop();const data=route.request().postDataJSON();
+    calls.push({operation,data,authorization:route.request().headers().authorization});
+    let result;
+    if(operation==='listAdminProducts')result={products:product?[product]:[]};
+    else if(operation==='listAdminEmployees')result={employees:employee?[employee]:[]};
+    else if(operation==='saveAdminProduct'){product={...data};result={productId:data.productId};}
+    else if(operation==='createEmployeeCode'){employee={...data,active:true};result={employeeId:data.employeeId,code:'87451239'};}
+    else throw new Error(`Operação API inesperada: ${operation}`);
+    await route.fulfill({status:200,headers:cors,json:{result}});
+  });
+  await page.goto('/#/operacao/admin');
+  await page.getByLabel('ID do restaurante').fill('teste');
+  await page.getByLabel('E-mail').fill('admin@example.test');
+  await page.getByLabel('Senha').fill('senha-ficticia');
+  await page.getByRole('button',{name:'Continuar'}).click();
+  await expect(page.getByRole('heading',{name:'Confirme no autenticador'})).toBeVisible();
+  expect(calls).toHaveLength(0);
+  await page.getByLabel('Código do autenticador').fill('123456');
+  await page.getByRole('button',{name:'Confirmar código'}).click();
+  await expect(page.getByRole('heading',{name:'Produtos',exact:true})).toBeVisible();
+  await page.getByLabel('Nome',{exact:true}).fill('Combo de teste');
+  await page.getByLabel('Preço em reais').fill('12,50');
+  await page.getByLabel('Bar',{exact:true}).check();await page.getByLabel('Cozinha',{exact:true}).check();
+  await page.getByRole('button',{name:'Salvar produto'}).click();
+  await expect(page.getByRole('heading',{name:'Combo de teste'})).toBeVisible();
+  const saved=calls.find(c=>c.operation==='saveAdminProduct');
+  expect(saved.authorization).toBe(`Bearer ${adminJwt}`);expect(saved.data).toMatchObject({restaurantId:'teste',name:'Combo de teste',priceCents:1250,sectors:['bar','kitchen'],available:true});
+  await page.getByLabel('Nome do funcionário').fill('Luana');await page.getByLabel('Função').selectOption('manager');
+  await page.getByRole('button',{name:'Criar código'}).click();
+  await expect(page.getByText('87451239')).toBeVisible();
+  expect(calls.find(c=>c.operation==='createEmployeeCode').data).toMatchObject({restaurantId:'teste',displayName:'Luana',role:'manager'});
+  await page.getByRole('button',{name:'Fechar código'}).click();await expect(page.getByText('87451239')).toHaveCount(0);
+  await page.getByRole('button',{name:'Sair',exact:true}).click();await expect(page.getByRole('heading',{name:'Entrar com verificação em duas etapas'})).toBeVisible();
+});
+
+test('acesso administrativo sem segundo fator é recusado antes de acessar a API',async({page})=>{
+ let calls=0;
+ await page.route('https://identitytoolkit.googleapis.com/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const json=route.request().url().includes('accounts:lookup')?{users:[{localId:'participante1',providerUserInfo:[]}]}:{idToken:jwt,refreshToken:'refresh-test',localId:'participante1',expiresIn:'3600'};
+  await route.fulfill({status:200,headers:cors,json});
+ });
+ await page.route('https://api.example.test/**',async route=>{calls++;await route.abort();});
+ await page.goto('/#/operacao/admin');await page.getByLabel('ID do restaurante').fill('teste');await page.getByLabel('E-mail').fill('admin@example.test');await page.getByLabel('Senha').fill('senha-ficticia');await page.getByRole('button',{name:'Continuar'}).click();
+ await expect(page.getByRole('alert')).toContainText('duas etapas');await expect(page.getByRole('heading',{name:'Produtos',exact:true})).toHaveCount(0);expect(calls).toBe(0);
+});

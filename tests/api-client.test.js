@@ -28,3 +28,17 @@ test('não inventa sucesso quando a API nega ou devolve dados inválidos', async
   await assert.rejects(() => malformed.listMenu('a', 'b'), /cardápio inválida/);
   assert.throws(() => createApiClient({ baseUrl: 'http://public.example', getToken: async () => 'x' }), /HTTPS/);
 });
+
+test('valida respostas administrativas e não divulga código na listagem', async () => {
+  const requests=[];
+  const api=createApiClient({baseUrl:'https://api.example',getToken:async()=> 'token-admin',fetchImpl:async(url,options)=>{
+    requests.push({url,body:JSON.parse(options.body),authorization:options.headers.authorization});
+    const result=url.endsWith('listAdminEmployees')?{employees:[{employeeId:'id1',displayName:'Ana',role:'waiter',active:true}]}:{employeeId:'id1',code:'01234567'};
+    return {ok:true,json:async()=>({result})};
+  }});
+  const staff=await api.listAdminEmployees('rest');assert.deepEqual(staff,[{employeeId:'id1',displayName:'Ana',role:'waiter',active:true}]);
+  const code=await api.createEmployeeCode({restaurantId:'rest',employeeId:'id1',displayName:'Ana',role:'waiter'});assert.equal(code.code,'01234567');
+  assert.equal(requests[0].authorization,'Bearer token-admin');assert.deepEqual(requests[0].body,{restaurantId:'rest'});
+  const invalid=createApiClient({baseUrl:'https://api.example',getToken:async()=> 'token',fetchImpl:async()=>({ok:true,json:async()=>({result:{employeeId:'other',code:'01234567'}})})});
+  await assert.rejects(()=>invalid.createEmployeeCode({restaurantId:'rest',employeeId:'id1'}),/inválida/);
+});
