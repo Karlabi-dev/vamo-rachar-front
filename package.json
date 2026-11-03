@@ -9,9 +9,11 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.js",
     "test:e2e:demo": "playwright test --config=playwright.config.js",
-    "test:e2e:api": "playwright test --config=playwright.connected.config.js"
+    "test:e2e:api": "playwright test --config=playwright.connected.config.js",
+    "test:e2e:kitchen": "playwright test --config=playwright.kitchen.config.js"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
     "@fontsource/nunito-sans": "^5.1.0",
     "firebase": "^13.1.0",
     "lucide-react": "^0.468.0",

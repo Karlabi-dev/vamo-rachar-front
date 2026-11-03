@@ -64,3 +64,15 @@ npx firebase emulators:exec --project demo-vamo-rachar --only auth,firestore 'no
 ```
 
 O script espera o backend em `../Vamo-Rachar-` em relação ao front; use `VAMO_BACKEND_PATH` se estiver em outro local. Ele aceita apenas hosts de emuladores locais e um projeto `demo-*`, cria dados fictícios nos emuladores e não acessa o Firebase real. Esse teste integrado precisa dos dois repositórios e é independente dos testes do GitHub Actions deste repositório.
+
+## Cozinha e Bar em demonstração local
+
+Abra `/#/cozinha` para a fila de cozinha e `/#/bar` para dados fictícios do bar, em qualquer modo de execução. Essas rotas são carregadas separadamente e não inicializam o cliente conectado nem o Firebase. Nenhum pedido ou status é enviado a um serviço externo.
+
+A fila de cozinha foi implementada a partir da referência visual e do contexto de design do frame Figma `110:29366`: Inter, oito cartões por mesa, recebimento e previsão, observações, destaque de entrega parcial, atrasos e espera pelo garçom. Usa quatro colunas em notebook/desktop, três ou duas em larguras intermediárias e uma em celulares. O cabeçalho e a navegação ficam fixos; não foi reproduzida a barra decorativa de navegador do design, conforme a orientação anterior sobre exibir o sistema sem moldura.
+
+`/#/cozinha/estados` lista loading, vazio, erro e atualização com sucesso. `Ver detalhes` abre **uma prévia local dos itens**, com confirmação para mudar o status de um item e retorno à fila. Essa prévia não é a reprodução da tela de detalhes do Figma: a consulta dessa referência, assim como das telas de Praça e Administrador, foi bloqueada pelo limite do plano Starter. Essas telas permanecem pendentes de imagens exportadas ou acesso liberado. Não há páginas de Praça ou Administrador implementadas nesta entrega parcial.
+
+O estado da fila fica somente na memória e é reiniciado ao recarregar a página. Os pedidos parcialmente entregues continuam visíveis; quando todos os itens de um pedido fictício são marcados como entregues ao garçom, o cartão sai da fila local. Isso é uma demonstração visual, sem regra financeira, autenticação, API ou persistência em banco. A logo usa o arquivo original já existente no projeto. Os itens do Bar são exemplos criados para a demonstração, não uma cópia de uma tela de referência específica.
+
+Para executar os testes desta área, use `npm run test:e2e:kitchen` após instalar o Chromium do Playwright.
