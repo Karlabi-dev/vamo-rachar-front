@@ -39,14 +39,23 @@ async function main(){
   await invite();assert.equal((await rest.collection('workQueue').get()).size,1);
   await bruno.getByRole('button',{name:'Atualizar convites'}).click();await bruno.getByRole('button',{name:'Aceitar Fritas de teste'}).click();await bruno.getByText(/Sua parte foi aceita/).waitFor();
   assert.equal((await rest.collection('workQueue').get()).size,2);
+  // A seleção do novo convite deve estar dentro do próprio pedido recusado.
+  await invite();await bruno.getByRole('button',{name:'Atualizar convites'}).click();await bruno.getByRole('button',{name:'Recusar Fritas de teste'}).click();await bruno.getByText(/Convite recusado/).waitFor();
+  await ana.getByRole('button',{name:'Atualizar pedidos'}).click();
+  const rejected=ana.locator('article.connected-invitation').filter({hasText:'Divisão recusada'});
+  await rejected.getByRole('button',{name:'Convidar novamente para Fritas de teste'}).click();
+  const review=rejected.getByRole('region',{name:'Revisar pedido'});await review.getByLabel('Bruno').check();await review.getByRole('button',{name:'Enviar convites'}).click();
+  await ana.getByRole('status').getByText('Novos convites enviados.').waitFor();
+  await bruno.getByRole('button',{name:'Atualizar convites'}).click();await bruno.getByRole('button',{name:'Aceitar Fritas de teste'}).click();await bruno.getByText(/Sua parte foi aceita/).waitFor();
+  assert.equal((await rest.collection('workQueue').get()).size,3);
   const orderDocs=await rest.collection('sessions').doc(sessionId).collection('orders').get();
   const amounts=[];
   for(const order of orderDocs.docs){const entries=await order.ref.collection('items').get();for(const item of entries.docs){const shares=await item.ref.collection('shares').get();if(shares.size===2&&item.data().status==='received')amounts.push(...shares.docs.map(d=>d.data().amountCents));}}
-  assert.deepEqual(amounts.sort((a,b)=>a-b),[1550,1551]);
+  assert.deepEqual(amounts.sort((a,b)=>a-b),[1550,1550,1551,1551]);
   await ana.getByRole('button',{name:'Pedir 1 unidade'}).click();await rest.collection('menuItems').doc('fritas').update({priceCents:3201});
   await ana.getByRole('button',{name:'Confirmar pedido'}).click();await ana.getByRole('alert').getByText(/pedido não foi criado/).waitFor();
-  assert.equal((await rest.collection('workQueue').get()).size,2);assert.equal((await rest.collection('sessions').doc(sessionId).collection('orders').get()).size,2);
-  console.log('Dois clientes, recusa/assunção, aceite, centavos e recusa de preço alterado: OK.');
+  assert.equal((await rest.collection('workQueue').get()).size,3);assert.equal((await rest.collection('sessions').doc(sessionId).collection('orders').get()).size,3);
+  console.log('Dois clientes, recusa, assunção, novo convite, aceite, centavos e recusa de preço alterado: OK.');
  }finally{if(browser)await browser.close();vite.kill('SIGTERM');await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

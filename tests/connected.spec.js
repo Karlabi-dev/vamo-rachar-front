@@ -289,3 +289,33 @@ test('retoma resolução recusada usando o mesmo identificador após resposta pe
  await page.getByRole('button',{name:'Tentar confirmar alteração'}).click();await expect(page.getByRole('status')).toContainText('assumiu o item integralmente');
  expect(requests).toHaveLength(2);expect(requests[0]).toEqual(requests[1]);expect(requests[0]).toMatchObject({orderId:'pedido1',itemId:'item1',action:'assume',inviteeIds:[]});
 });
+
+test('novo convite abre junto ao item recusado e mostra o resultado no mesmo lugar',async({page})=>{
+ await page.setViewportSize({width:390,height:700});const requests=[];let participantAttempts=0;
+ await page.route('https://identitytoolkit.googleapis.com/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const json=route.request().url().includes('accounts:lookup')?{users:[{localId:'participante1',providerUserInfo:[]}]}:{idToken:jwt,refreshToken:'refresh-test',localId:'participante1',expiresIn:'3600'};
+  await route.fulfill({status:200,headers:cors,json});
+ });
+ await page.route('https://api.example.test/**',async route=>{
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+  const op=route.request().url().split('/').pop();let result;
+  if(op==='joinTable')result={sessionId:'sessao1',participantId:'participante1'};
+  else if(op==='listMenu')result={items:Array.from({length:6},(_,i)=>({id:`produto${i}`,name:`Produto ${i}`,priceCents:1250}))};
+  else if(op==='listMyOrders')result={orderIds:['pedido1']};
+  else if(op==='listMyOrderItems')result={isOwner:true,items:[{itemId:'item1',name:'Suco',quantity:1,totalCents:1250,amountCents:625,status:requests.length?'cancelled':'split_rejected'}]};
+  else if(op==='listSessionParticipants'){participantAttempts++;if(participantAttempts===1)return route.fulfill({status:503,headers:cors,json:{error:'unavailable'}});result={participants:[{participantId:'participante1',displayName:'Ana'},{participantId:'participante2',displayName:'Bruno'}]};}
+  else if(op==='resolveRejectedSplit'){requests.push(route.request().postDataJSON());result={itemId:'novo-item',action:'reinvite'};}
+  else throw new Error(`Operação inesperada: ${op}`);
+  await route.fulfill({status:200,headers:cors,json:{result}});
+ });
+ await page.goto('/?restaurantId=restaurante-teste&tableId=mesa-13');await page.getByLabel('Como podemos te chamar?').fill('Ana');await page.getByRole('button',{name:'Entrar na mesa'}).click();await page.getByRole('button',{name:'Atualizar pedidos'}).click();
+ const rejected=page.locator('article.connected-invitation').filter({hasText:'Divisão recusada'});const button=rejected.getByRole('button',{name:'Convidar novamente para Suco'});
+ await button.scrollIntoViewIfNeeded();const scrollBefore=await page.evaluate(()=>window.scrollY);expect(scrollBefore).toBeGreaterThan(500);
+ await button.click();await expect(rejected.getByRole('alert')).toBeVisible();expect(await page.evaluate(()=>window.scrollY)).toBeGreaterThan(500);
+ await button.click();const panel=rejected.getByRole('region',{name:'Revisar pedido'});await expect(panel.getByRole('heading',{name:'Escolha novas pessoas'})).toBeFocused();
+ expect(await page.evaluate(()=>window.scrollY)).toBeGreaterThan(500);await panel.getByLabel('Bruno').check();await panel.getByRole('button',{name:'Enviar convites'}).click();
+ const finalItem=page.locator('article.connected-invitation').filter({has:page.getByRole('heading',{name:'Suco',exact:true})});
+ await expect(finalItem).toContainText('Cancelado');await expect(finalItem.getByRole('status')).toContainText('Novos convites enviados');
+ expect(requests).toHaveLength(1);expect(requests[0]).toMatchObject({restaurantId:'restaurante-teste',sessionId:'sessao1',orderId:'pedido1',itemId:'item1',action:'reinvite',inviteeIds:['participante2']});
+});
